@@ -54,4 +54,17 @@ public class S3UtilTest extends LuteceTestCase
         assertTrue( strPath.matches( "\\d{4}/\\d{1,2}-\\d{1,2}/.*-\\d{1,2}-\\d{1,2}-\\d{1,2}-[0-9a-f-]{36}" ) );
         assertNotEquals( S3Util.getStrPath( "{UUID}" ), S3Util.getStrPath( "{UUID}" ) );
     }
+
+    /**
+     * A code written as a URL gives a key segment S3 accepts, and the empty segments of the path are removed
+     */
+    @Test
+    public void testKeySegment( )
+    {
+        assertEquals( "http-127.0.0.1-lutece", S3Util.toKeySegment( "http://127.0.0.1/lutece" ) );
+        assertEquals( "mon-site", S3Util.toKeySegment( "mon site" ) );
+        assertEquals( "", S3Util.toKeySegment( "" ) );
+        assertFalse( S3Util.getStrPath( "/{YYYY}//{UUID}" ).startsWith( "/" ) );
+        assertFalse( S3Util.getStrPath( "/{YYYY}//{UUID}" ).contains( "//" ) );
+    }
 }

@@ -34,6 +34,8 @@
 
 package fr.paris.lutece.plugins.sthree.util;
 
+import java.util.regex.Matcher;
+
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 
 public class S3Util
@@ -46,14 +48,38 @@ public class S3Util
 
     }
 
+    /**
+     * Builds the key of a new object from the path pattern: {YYYY}, {MM}, {DD}, {HH}, {mm}, {ss}, {UUID} and {code} (lutece.code) are replaced. The
+     * code is reduced to the characters an S3 key segment accepts (a code written as a URL, http://host/lutece, gives http-host-lutece), and the empty
+     * segments of the path are removed.
+     *
+     * @param pattern
+     *            the path pattern
+     * @return the object key
+     */
     public static String getStrPath( String pattern )
     {
-        return pattern.replaceAll( "\\{YYYY\\}", java.time.Year.now( ).toString( ) ).replaceAll( "\\{MM\\}", java.time.MonthDay.now( ).getMonthValue( ) + "" )
-                .replaceAll( "\\{DD\\}", java.time.MonthDay.now( ).getDayOfMonth( ) + "" ).replaceAll( "\\{HH\\}", java.time.LocalTime.now( ).getHour( ) + "" )
-                .replaceAll( "\\{mm\\}", java.time.LocalTime.now( ).getMinute( ) + "" ).replaceAll( "\\{ss\\}", java.time.LocalTime.now( ).getSecond( ) + "" )
-                .replaceAll( "\\{UUID\\}", java.util.UUID.randomUUID( ).toString( ) ).replaceAll( "\\{code\\}", AppPropertiesService.getProperty( CODE, "" ) ); // A
-                                                                                                                                                                // récupérer
-                                                                                                                                                                // de
-                                                                                                                                                                // config.properties
+        String strPath = pattern.replaceAll( "\\{YYYY\\}", java.time.Year.now( ).toString( ) )
+                .replaceAll( "\\{MM\\}", java.time.MonthDay.now( ).getMonthValue( ) + "" )
+                .replaceAll( "\\{DD\\}", java.time.MonthDay.now( ).getDayOfMonth( ) + "" )
+                .replaceAll( "\\{HH\\}", java.time.LocalTime.now( ).getHour( ) + "" )
+                .replaceAll( "\\{mm\\}", java.time.LocalTime.now( ).getMinute( ) + "" )
+                .replaceAll( "\\{ss\\}", java.time.LocalTime.now( ).getSecond( ) + "" )
+                .replaceAll( "\\{UUID\\}", java.util.UUID.randomUUID( ).toString( ) )
+                .replaceAll( "\\{code\\}", Matcher.quoteReplacement( toKeySegment( AppPropertiesService.getProperty( CODE, "" ) ) ) );
+
+        return strPath.replaceAll( "/{2,}", "/" ).replaceAll( "^/", "" );
+    }
+
+    /**
+     * Reduces a value to the characters an S3 key segment accepts: letters, digits and ! _ . * ' ( ) -; every other run of characters becomes a dash
+     *
+     * @param strValue
+     *            the value
+     * @return the key segment
+     */
+    static String toKeySegment( String strValue )
+    {
+        return strValue.replaceAll( "[^A-Za-z0-9!_.*'()-]+", "-" ).replaceAll( "^-+|-+$", "" );
     }
 }

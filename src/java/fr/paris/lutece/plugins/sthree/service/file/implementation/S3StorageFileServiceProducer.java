@@ -33,15 +33,12 @@
  */
 package fr.paris.lutece.plugins.sthree.service.file.implementation;
 
-import java.util.Optional;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 import fr.paris.lutece.portal.service.file.IFileDownloadUrlService;
-import fr.paris.lutece.portal.service.file.IFileRBACService;
 import fr.paris.lutece.portal.service.file.IFileStoreServiceProvider;
 import fr.paris.lutece.portal.service.file.implementation.DefaultFileDownloadService;
-import fr.paris.lutece.portal.service.util.CdiHelper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Named;
@@ -55,7 +52,7 @@ public class S3StorageFileServiceProducer
     public static final String BEAN_FILE_STORE_SERVICE_PROVIDER = "sthree.s3StorageFileService";
     public static final String BEAN_FILE_DOWNLOAD_URL_SERVICE = "sthree.s3FileDownloadUrlService";
 
-    private static final String PROVIDER_NAME = "s3StorageFileService";
+    private static final String PROVIDER_NAME = S3StorageFileServiceFactory.LEGACY_PROVIDER_NAME;
     private static final String DOWNLOAD_SEPARATOR = "!";
 
     /**
@@ -75,63 +72,19 @@ public class S3StorageFileServiceProducer
     }
 
     /**
-     * Produces the S3 file store service provider from the plugin configuration.
+     * Produces the historical single S3 file store service provider from the keys s3Url, s3Bucket... of the plugin configuration. It is not produced
+     * when instances are declared by sthree.instances (S3InstancesExtension).
      *
-     * @param strDownloadServiceName
-     *            the bean name of the download URL service
-     * @param strRbacServiceName
-     *            the bean name of the RBAC service
-     * @param strUrl
-     *            the S3 server URL
-     * @param strBucket
-     *            the S3 bucket
-     * @param strKey
-     *            the S3 access key
-     * @param strPassword
-     *            the S3 secret key
-     * @param strDefaultFilePath
-     *            the file path pattern
-     * @param strForcePathStyle
-     *            the path style flag
-     * @param strRegion
-     *            the S3 region
-     * @param strChecksumAlgorithm
-     *            the checksum algorithm
-     * @param strProxyHost
-     *            the proxy host
-     * @param strProxyUsername
-     *            the proxy user name
-     * @param strProxyPassword
-     *            the proxy password
-     * @param strRequestTimeout
-     *            the request timeout in seconds
-     * @param strConnectionTimeout
-     *            the connection timeout in seconds
      * @return the S3 file store service provider
      */
     @Produces
     @ApplicationScoped
     @Named( BEAN_FILE_STORE_SERVICE_PROVIDER )
-    public IFileStoreServiceProvider produceS3StorageFileService(
-            @ConfigProperty( name = "sthree.s3StorageFileService.downloadService", defaultValue = BEAN_FILE_DOWNLOAD_URL_SERVICE ) String strDownloadServiceName,
-            @ConfigProperty( name = "sthree.s3StorageFileService.rbacService", defaultValue = "defaultFileRBACService" ) String strRbacServiceName,
-            @ConfigProperty( name = "s3Url" ) Optional<String> strUrl, @ConfigProperty( name = "s3Bucket" ) Optional<String> strBucket,
-            @ConfigProperty( name = "s3Key" ) Optional<String> strKey, @ConfigProperty( name = "s3Password" ) Optional<String> strPassword,
-            @ConfigProperty( name = "s3DefaultFilePath" ) Optional<String> strDefaultFilePath,
-            @ConfigProperty( name = "s3ForcePathStyle" ) Optional<String> strForcePathStyle, @ConfigProperty( name = "s3Region" ) Optional<String> strRegion,
-            @ConfigProperty( name = "s3ChecksumAlgorithm" ) Optional<String> strChecksumAlgorithm,
-            @ConfigProperty( name = "s3ProxyHost" ) Optional<String> strProxyHost, @ConfigProperty( name = "s3ProxyUsername" ) Optional<String> strProxyUsername,
-            @ConfigProperty( name = "s3ProxyPassword" ) Optional<String> strProxyPassword,
-            @ConfigProperty( name = "s3RequestTimeout" ) Optional<String> strRequestTimeout,
-            @ConfigProperty( name = "s3ConnectionTimeout" ) Optional<String> strConnectionTimeout )
+    public IFileStoreServiceProvider produceS3StorageFileService( )
     {
-        S3StorageFileService service = new S3StorageFileService( CdiHelper.getReference( IFileDownloadUrlService.class, strDownloadServiceName ),
-                CdiHelper.getReference( IFileRBACService.class, strRbacServiceName ), strUrl.orElse( "" ), strBucket.orElse( "" ), strKey.orElse( "" ),
-                strPassword.orElse( "" ), strDefaultFilePath.orElse( "" ), strForcePathStyle.orElse( "" ), strRegion.orElse( "" ),
-                strChecksumAlgorithm.orElse( "" ), strProxyHost.orElse( "" ), strProxyUsername.orElse( "" ), strProxyPassword.orElse( "" ),
-                strRequestTimeout.orElse( "" ), strConnectionTimeout.orElse( "" ) );
-        service.setName( PROVIDER_NAME );
+        Config config = ConfigProvider.getConfig( );
 
-        return service;
+        return S3StorageFileServiceFactory.create( PROVIDER_NAME, strKey -> config.getOptionalValue( strKey, String.class ),
+                S3StorageFileServiceFactory::legacyKey );
     }
 }
